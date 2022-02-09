@@ -3,12 +3,12 @@ Continuation/Generalized-inverse method
 
 ## Introduction
 
-**`C/Ginv`** is a nonlinear model predictive controller whose nonlinear model predictive control (NMPC) problem DOES NOT employ cost functions, therefore having no weight parameters to tune and computationally light. With a 2.3GHz 2019 Macbook Pro, a computation time less than 1ms can be achieved with C/Ginv about certain systems, with Python.
+**`C/Ginv`** is a nonlinear model predictive controller whose nonlinear model predictive control (NMPC) problem DOES NOT employ cost functions, therefore having NO WEIGHT PARAMETERS TO TUNE and computationally light. With a 2.3GHz 2019 Macbook Pro, a computation time less than 1ms can be achieved with C/Ginv about certain systems, with Python language.
 
 The purpose of the Python codes in this github repository is to provide simulation examples of C/Ginv so that people can experience the easy-to-use handiness and the computation speed of this method.
 
 
-The codes DO NOT put emphasis on taking full advantage of Python language for speed, but rather concentrates on the readability. Therefore, one maybe able to implement a faster code than the ones found in this repository.
+The codes DO NOT put emphasis on taking full advantage of Python language for speed, but rather concentrates on the readability for easy translation to different programing languages such as C, C++, etx. Therefore, one maybe able to implement a faster code than the ones found in this repository.
 
 ## Notes 
 * Works with almost any state equations of the form dx/dt=f(t,x,u).
