@@ -26,7 +26,7 @@ The codes DO NOT put emphasis on taking full advantage of Python language for sp
 
 * Python ver. 3 (Python ver.2 not confirmed)
 
-## Getting Started (MATLAB 2018b)
+## Getting Started (Python ver.3)
 
 1. Put CGinv.py in the same directory with TestCGinv*.py files
 ``` Shell or Command line
