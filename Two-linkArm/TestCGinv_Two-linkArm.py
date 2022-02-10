@@ -239,8 +239,7 @@ Ctrler=C_Ginv(plant, UFunc.Kth_order, input_dim, term_cond)
 ##  state :  x ##
 #################
 x=np.zeros([max_iter+1,state_dim])
-x[0,0]=x_init[0]
-x[0,1]=x_init[1]
+x[0,:]=x_init
 
 
 
