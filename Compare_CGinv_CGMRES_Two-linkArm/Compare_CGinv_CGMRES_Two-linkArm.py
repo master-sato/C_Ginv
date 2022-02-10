@@ -3,7 +3,7 @@ Comparison of Continuation/Generalized-inverse (G/Ginv) method
  and          Continuation/Generalized Minimum RESidual (C/GMRES) method
  Two-link Arm system
  
-Made in Feb. 2022
+Made in Feb. 2022 ver. 0.1
 
 BSD 2-Clause License
 

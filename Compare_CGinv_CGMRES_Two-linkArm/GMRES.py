@@ -1,7 +1,7 @@
 '''
 Generalized Minimum RESidual (GMRES) methods
 
-Made in Jan. 2022
+Made in Jan. 2022 ver. 0.1
 
 BSD 2-Clause License
 
