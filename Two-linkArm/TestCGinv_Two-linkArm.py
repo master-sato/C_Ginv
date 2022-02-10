@@ -1,7 +1,7 @@
 '''
 Example of Continuation/Generalized-inverse (G/Ginv) method
 (Two-link arm)
-Made in Feb. 2022
+Made in Feb. 2022 ver.0.1
 
 
 BSD 2-Clause License
