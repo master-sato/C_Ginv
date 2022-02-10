@@ -60,6 +60,11 @@ max_iterations = 15  # maximum iteration of Gauss-Newton method
 k = 1                # damping coefficient inside Gauss-Newton method
 
 
+## file_name for saving graphs ##
+file_name='Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(dt)+'DiffOrd'+str(diff_order)
+
+
+
 ## vector for filtering terminal state ##
 term_cond=np.zeros(state_dim)
 term_cond[0]=1     # 1 if you want to fix x(t+T)[0]=x_ref[0], if not then 0
@@ -159,10 +164,6 @@ class dUdt:
 
 
 
-
-
-
-
 ####################
 ##  Initial state ##
 ####################
@@ -177,6 +178,8 @@ x_init[1]=-np.pi/180*60
 ##  target state ##
 ###################
 x_ref=np.zeros(state_dim)
+
+
 
 
 
@@ -254,10 +257,6 @@ U_init =np.zeros(diff_order*input_dim)
 
 
 
-#################################
-## file_name for saving graphs ##
-#################################
-file_name='Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(dt)+'DiffOrd'+str(diff_order)
 
 
 
@@ -418,7 +417,7 @@ plt.xlabel('time[s]')
 plt.ylabel('Computation time[s]')
 
 plt.grid()
-fig.savefig(file_name+'CalcTime.png', pad_inches=0.0)
+#fig.savefig(file_name+'CalcTime.png', pad_inches=0.0)
 plt.show()
 
 
@@ -447,7 +446,7 @@ plt.xlabel('time[s]')
 
 plt.grid()
 plt.legend()
-fig.savefig(file_name+'Theta.png', pad_inches=0.0)
+#fig.savefig(file_name+'Theta.png', pad_inches=0.0)
 plt.show()
 
 
@@ -469,7 +468,7 @@ plt.ylabel('[Nm]')
 
 plt.grid()
 plt.legend()
-fig.savefig(file_name+'Inputs.png', pad_inches=0.0)
+#fig.savefig(file_name+'Inputs.png', pad_inches=0.0)
 plt.show()
 
 
