@@ -3,6 +3,12 @@ Example of Continuation/GMRES (G/GMRES) method
 (Two-link arm)
 
 Made in Feb. 2022 ver. 0.1
+        Feb. 2022 ver. 0.2
+            Splitting time step (dt) of system time evolution and
+            sampling period (SamplingT). The input value is on hold
+            till the next sampling peirod, making a discrete input
+            to a continuous state equation.
+
 
 BSD 2-Clause License
 
@@ -46,14 +52,17 @@ state_dim=4    # state dimension
 input_dim=2    # input dimension
 
 t0=0.0         # initial time [s]
-T=0.2         # Horizon [s]
-N=2           # Integration steps within the MPC computation
+T=0.1         # Horizon [s]
+N=4           # Integration steps within the MPC computation
 
-dt=0.025         # Sampling time [s]
-Tf=5           # Simulation time [s]
+SamplingT=0.03   # Sampling period [s]
+dt=0.0001           # Time step for evolution of actual time [s]
+Tf=3           # Simulation time [s]
 iter=int((Tf-t0)/dt)   # iteration of simulation (for loop iteration)
 zeta=1/dt      # parameter for C/GMRES
 
+delta=SamplingT/20    # Window width to catch sampling period timing.
+                      # Try (Sampling period)/20 or (Sampling period)/30.
 
 ## parameters for GMRES and Newton type methods ##
 tol = 1e-5           # terminates iteration when norm(Func) < tol
@@ -65,7 +74,7 @@ k = 1                # damping coefficient inside Gauss-Newton method
 #################################
 ## file_name for saving graphs ##
 #################################
-file_name='CGMRES_DoublePen_T'+str(T)+'N'+str(N)+'dt'+str(dt)
+file_name='CGMRES_Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(dt)
 
 
 
@@ -100,8 +109,8 @@ Q[1,1]=20
 Q[2,2]=0.01
 Q[3,3]=0.01
 
-R[0,0]=1
-R[1,1]=1
+R[0,0]=0.1
+R[1,1]=0.1
 
 
 S[0,0]=4
@@ -200,8 +209,7 @@ Ctrler=C_GMRES(plant,state_dim, input_dim,Q,R,S)
 ##  state :  x ##
 #################
 x=np.zeros([iter+1,state_dim])
-x[0,0]=x_init[0]
-x[0,1]=x_init[1]
+x[0,:]=x_init
 
 ##############
 ## input: u ##
@@ -229,6 +237,7 @@ t[0]=t0
 #################################
 ## list for graph of calc_time ##
 #################################
+t_list=[]
 calc_time_list=[]
 
 
@@ -263,6 +272,7 @@ t_start = time.time()
 u[0] = Ctrler.u_init(x[0], x_ref, t[0], T, U_init, N, tolerance=tol, max_iter=max_iter_Newton, k=k)
 t_end = time.time()
 calc_time_list.append(t_end-t_start)
+t_list.append(t[0])
 
 
 
@@ -300,25 +310,31 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
+u_discrete=0
+t_prev=t[0]
 for i in range(1,iter):
-#for i in range(1,2):
-    ############################
-    ### MPC computation     ####
-    ############################
-    t_start = time.time()
-    u[i] = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N, dt,zeta,tol, max_iter_FDGMRES)
-    t_end = time.time()
-    calc_time_list.append(t_end-t_start)
+    if SamplingT - delta < t[i]-t_prev and\
+       t[i]-t_prev < SamplingT + delta:
+        ############################
+        ### MPC computation     ####
+        ############################
+        t_start = time.time()
+        u_discrete = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N, dt,zeta,tol, max_iter_FDGMRES)
+        t_end = time.time()
+        calc_time_list.append(t_end-t_start)
+        t_list.append(t[i])
 
-    ## displaying some results ##
-    print('t:{:.4g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
-    print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
-    print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-    print('   N =',N,', Horizon=',T,'[s]')
-    F=Ctrler.F(t[i],x[i],Ctrler.U)
-    print('   |F(t,x,U)|=',np.linalg.norm(F))
-    print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
-    print()
+        ## displaying some results ##
+        print('t:{:.4g}'.format(t[i]),'[s] | u[',i,'] =',u_discrete)
+        print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
+        print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
+        print('   N =',N,', Horizon=',T,'[s]')
+        F=Ctrler.F(t[i],x[i],Ctrler.U)
+        print('   |F(t,x,U)|=',np.linalg.norm(F))
+        print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
+        print()
+
+        t_prev = t[i]
 
 
 
@@ -326,6 +342,7 @@ for i in range(1,iter):
     #####################################
     ### time evolution of real plant ####
     #####################################
+    u[i] = u_discrete
     x[i+1]=x[i]+plant(t[i],x[i], u[i])*dt
     t[i+1]=t[i]+dt
     
@@ -382,8 +399,8 @@ print(S)
 
 fig = plt.figure()
 
-plt.plot(t[:-1],calc_time_list)
-plt.axhline(y=dt, xmin=0.0, xmax=Tf, linestyle='dotted')
+plt.plot(t_list,calc_time_list)
+plt.axhline(y=SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
 plt.xlabel('time[s]')
 plt.ylabel('Computation time[s]')
 
