@@ -60,8 +60,26 @@ max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
 zeta=1/dt      # parameter for C/Ginv and C/GMRES
 
 
+####################
+##  Initial state ##
+####################
+x_init=np.zeros(state_dim)
+x_init[0]=-np.pi/180*45
+x_init[1]=-np.pi/180*60
+
+
+###################
+##  target state ##
+###################
+x_ref=np.zeros(state_dim)
+
+
 ## file_name for saving graphs ##
 file_name='Compare_Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(dt)
+
+
+
+
 
 
 #############################################
@@ -255,20 +273,6 @@ def plant(t, x, u):
 
 
 
-####################
-##  Initial state ##
-####################
-x_init=np.zeros(state_dim)
-x_init[0]=-np.pi/180*45
-x_init[1]=-np.pi/180*60
-
-
-
-
-###################
-##  target state ##
-###################
-x_ref=np.zeros(state_dim)
 
 
 
