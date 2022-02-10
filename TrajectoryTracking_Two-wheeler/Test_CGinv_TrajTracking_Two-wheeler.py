@@ -72,6 +72,76 @@ omega1=0.8
 Radius=10      # radius of arc
 omega2=0.5
 
+
+####################
+##  Initial state ##
+####################
+x_init=np.zeros(state_dim)
+x_init[0]=-1          # Initial position x_init=[x,y,theta]^T=
+x_init[1]=0           #             [-1[m], 0[m], 0[rad]]^T
+x_init[2]=np.pi/180*(-0)
+
+
+
+###########################
+##  reference trajectory ##
+###########################
+x_ref=np.zeros([max_iter+1,state_dim])
+
+
+boot_up=0
+for i in range(1,x_ref.shape[0]-1):
+    tau=i/max_iter*Tf
+
+    eps=1e-5
+
+    dxdt=np.zeros(state_dim)
+
+    if tau<Tf/3:
+        ## y=-a*tau ##
+        dxdt[0]=1
+        dxdt[1]=a
+
+        x_ref[i+1]=x_ref[i]+dxdt*dt
+
+    elif Tf/3<=tau and tau<2*Tf/3:
+        ## y=A*sin(omega1*(tau-Tf/3)) ##
+        dxdt[0]=1
+        dxdt[1]=A*omega1*np.sin(omega1*(tau-Tf/3))
+        x_ref[i+1]=x_ref[i]+dxdt*dt
+
+
+    elif 2*Tf/3<=tau:
+        ## circle ##
+        dxdt[0]= Radius*omega2*np.sin(omega2*(tau-2*Tf/3))
+        dxdt[1]=-Radius*omega2*np.cos(omega2*(tau-2*Tf/3))
+
+        x_ref[i+1]=x_ref[i]+dxdt*dt
+
+
+
+    ## to obtain x[3]:=theta of x_ref ##
+    xnow=x_ref[i,0]
+    ynow=x_ref[i,1]
+    xprev=x_ref[i-1,0]
+    yprev=x_ref[i-1,1]
+    if abs(xnow-xprev)<eps:
+        x_ref[i,2]=np.arctan((ynow-yprev)/(eps))+boot_up
+    else:
+        x_ref[i,2]=np.arctan((ynow-yprev)/(xnow-xprev))+boot_up
+    if np.pi/2 - 3e-3 < x_ref[i,2]:
+        boot_up=np.pi
+
+    pass
+
+
+
+
+
+
+
+
+
 ## vector for filtering terminal state ##
 term_cond=np.zeros(state_dim)
 term_cond[0]=1     # 1 if you want to fix x(t+T)[0]=x_ref[0], if not then 0
@@ -150,71 +220,6 @@ class dUdt:
 
     
 
-####################
-##  Initial state ##
-####################
-x_init=np.zeros(state_dim)
-x_init[0]=-1          # Initial position x_init=[x,y,theta]^T=
-x_init[1]=0           #             [-1[m], 0[m], 0[rad]]^T
-x_init[2]=np.pi/180*(-0)
-
-
-
-###########################
-##  reference trajectory ##
-###########################
-x_ref=np.zeros([max_iter+1,state_dim])
-x_ref[0,0]=0
-x_ref[0,1]=0
-
-
-boot_up=0
-for i in range(1,x_ref.shape[0]-1):
-    tau=i/max_iter*Tf
-
-    eps=1e-5
-
-    dxdt=np.zeros(state_dim)
-
-    if tau<Tf/3:
-        ## y=-a*tau ##
-        dxdt[0]=1
-        dxdt[1]=a
-
-        x_ref[i+1]=x_ref[i]+dxdt*dt
-
-    elif Tf/3<=tau and tau<2*Tf/3:
-        ## y=A*sin(omega1*(tau-Tf/3)) ##
-        dxdt[0]=1
-        dxdt[1]=A*omega1*np.sin(omega1*(tau-Tf/3))
-        x_ref[i+1]=x_ref[i]+dxdt*dt
-
-
-    elif 2*Tf/3<=tau:
-        ## circle ##
-        dxdt[0]= Radius*omega2*np.sin(omega2*(tau-2*Tf/3))
-        dxdt[1]=-Radius*omega2*np.cos(omega2*(tau-2*Tf/3))
-
-        x_ref[i+1]=x_ref[i]+dxdt*dt
-
-
-
-    ## to obtain x[3]:=theta of x_ref ##
-    xnow=x_ref[i,0]
-    ynow=x_ref[i,1]
-    xprev=x_ref[i-1,0]
-    yprev=x_ref[i-1,1]
-    if abs(xnow-xprev)<eps:
-        x_ref[i,2]=np.arctan((ynow-yprev)/(eps))+boot_up
-    else:
-        x_ref[i,2]=np.arctan((ynow-yprev)/(xnow-xprev))+boot_up
-    if np.pi/2 - 3e-3 < x_ref[i,2]:
-        boot_up=np.pi
-
-
-
-
-    pass
 
 
 
