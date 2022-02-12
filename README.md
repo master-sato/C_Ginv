@@ -36,9 +36,8 @@ The codes DO NOT put emphasis on taking full advantage of Python language for sp
 >> python [filename].py
 ```
 
-## Citing ParNMPC
+## Citing C/Ginv
 
-Citing the MPC algorithm:
 
 #comming soon.
 
