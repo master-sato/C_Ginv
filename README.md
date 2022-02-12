@@ -14,7 +14,7 @@ The codes DO NOT put emphasis on taking full advantage of Python language for sp
 ## Notes 
 * Works with almost any state equations of the form dx/dt=f(t,x,u).
 * Quick rise time and high convergence rate.
-* Constraints are not considered yet in Version 0.1.
+* Constraints are not considered yet in Version 0.
 * Uses only numpy and no other special packages.
 
 
