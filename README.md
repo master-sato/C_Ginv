@@ -15,7 +15,7 @@ The codes DO NOT put emphasis on taking full advantage of Python language for sp
 * Works with almost any state equations of the form dx/dt=f(t,x,u).
 * Quick rise time and high convergence rate.
 * Constraints are not considered yet in Version 0.
-* Uses only numpy and no other special packages.
+* Uses only numpy, matplotlib, and time packages. No other special packages are required.
 
 
 ## Installation
@@ -27,7 +27,7 @@ The codes DO NOT put emphasis on taking full advantage of Python language for sp
 ## Requirements
 
 * Python ver. 3 (Python ver.2 not confirmed)
-* numpy
+* numpy, matplotlib, and time package.
 
 ## Getting Started (Python ver.3)
 
