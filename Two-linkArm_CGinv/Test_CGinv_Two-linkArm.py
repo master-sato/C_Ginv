@@ -54,16 +54,17 @@ diff_order=2      # k of u^(k)=0
 
 t0=0.0            # initial time [s]
 T=0.2             # Horizon [s]
-N=2               # Integration steps within the MPC computation
+N=state_dim               # Integration steps within the MPC computation
 
-SamplingT=0.0125     # Sampling period [s]
-dt=0.001           # Time step for time evolution [s]
-Tf=5              # Simulation duration [s]
+SamplingT=0.1     # Sampling period [s]
+dt=0.0001           # Time step for time evolution [s]
+Tf=1              # Simulation duration [s]
 max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
-zeta = 1/SamplingT       # damping parameter for C/Ginv
+zeta = 1/SamplingT*(SamplingT/dt)       # damping parameter for C/Ginv
+zeta = 1/dt
 
-delta=SamplingT/20    # Window width to catch sampling period timing
-                      # Try (Sampling period)/10 to (Sampling period)/30
+delta = dt/1.5    # Window width to catch sampling period timing
+                  # Try dt/1.2 to dt/1.5
 
 
 ## parameters for Gauss-Newton methods ##
@@ -413,6 +414,8 @@ print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
 print('Horizon T=',T,', Sampling period =',SamplingT)
+print('zeta=',zeta*SamplingT,'/(Sampling period)')
+print('SamplingT/dt=',SamplingT/dt)
 print('N=',N,', diff_order=',diff_order,', input_dim=',input_dim)
 
 
