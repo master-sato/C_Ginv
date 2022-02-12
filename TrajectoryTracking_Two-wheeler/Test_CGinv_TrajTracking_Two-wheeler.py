@@ -7,6 +7,8 @@ Made in Feb. 2022 ver. 0.1
             sampling period (SamplingT). The input value is on hold
             till the next sampling peirod, making a discrete input
             to a continuous state equation.
+        Feb. 2022 ver. 0.2.1
+            Bug fixed.
 
 
 BSD 2-Clause License
@@ -48,18 +50,21 @@ from CGinv import C_Ginv
 ###########################
 state_dim=3    # state dimension
 input_dim=2    # input dimension
-diff_order=10   # k of u^(k)=0
+diff_order=2   # k of u^(k)=0
 
 t0=0.0         # initial time [s]
-T=0.135         # Horizon [s]
+T=0.14         # Horizon [s]
 N=3            # Integration steps within the MPC computation
 
-SamplingT=0.01   # Sampling period [s]
-dt=0.001           # Time step for evolution of actual time [s]
+SamplingT=0.005   # Sampling period [s]
+dt=0.0001           # Time step for actual time evolution [s]
 Tf=30          # Simulation time [s]
 max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
 #zeta=1/dt
-zeta=1/SamplingT*2       # parameter for C/Ginv
+zeta=1/SamplingT*5.0       # parameter for C/Ginv
+#zeta=1/SamplingT*2.50       # parameter for C/Ginv
+#zeta=1/dt
+#zeta=1000
 
 delta=SamplingT/20    # Window width to catch sampling period timing.
                       # Try (Sampling period)/20 or (Sampling period)/30.
@@ -139,7 +144,7 @@ for i in range(1,x_ref.shape[0]-1):
         x_ref[i,2]=np.arctan((ynow-yprev)/(eps))+boot_up
     else:
         x_ref[i,2]=np.arctan((ynow-yprev)/(xnow-xprev))+boot_up
-    if np.pi/2 - 3e-3 < x_ref[i,2]:
+    if np.pi/2 - 5e-2 < x_ref[i,2]:
         boot_up=np.pi
 
     pass
@@ -375,8 +380,8 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete = 0
-t_prev = 0
+u_discrete = u[0]
+t_prev = t[0]
 for i in range(1,max_iter):
     if SamplingT - delta < t[i]-t_prev and\
        t[i]-t_prev < SamplingT + delta:
@@ -485,12 +490,12 @@ fig = plt.figure()
 
 plt.plot(t_list,1000*calc_time_list)
 plt.axhline(y=1000*SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
-plt.xlabel('Time[s]')
-plt.ylabel('Computation time[ms]')
+plt.xlabel('Time[s]', fontsize=14)
+plt.ylabel('Computation time[ms]', fontsize=14)
 
-#plt.yticks([0.0,0.5,1,2,3,4,5,6])
+plt.yticks([0.0,0.5,1,2,3,4,5])
 plt.grid()
-#fig.savefig(file_name+'CalcTime.png', pad_inches=0.0)
+fig.savefig(file_name+'_CalcTime.png', pad_inches=0.0)
 plt.show()
 
 
@@ -511,7 +516,7 @@ plt.plot(t[:-1], x_ref[:-1,2], label='theta_ref', marker='',linestyle='dotted')
 
 
 
-plt.xlabel('Time[s]')
+plt.xlabel('Time[s]', fontsize=14)
 
 plt.grid()
 plt.legend()
@@ -543,7 +548,7 @@ fig = plt.figure()
 
 plt.plot(t[:-1], u[:-1,0], label='v [m/s]')
 plt.plot(t[:-1], u[:-1,1], label='delta [rad]',linestyle='dashed')
-plt.xlabel('Time[s]')
+plt.xlabel('Time[s]', fontsize=14)
 
 plt.grid()
 plt.legend()
@@ -571,8 +576,8 @@ plt.subplots_adjust(left=0.15, right=0.9, bottom=0.1, top=0.9)
 plt.plot(x_ref[:,0], x_ref[:,1], label='reference  trajectory',linestyle='dotted',color='blue')
 plt.plot(x[:,0], x[:,1], label='two-wheel vehicle',color='red')
 #plt.plot(times, u_list[:,0], label='u x 0.1')
-plt.xlabel('x[m]',fontsize=11)
-plt.ylabel('y[m]',fontsize=11)
+plt.xlabel('x[m]',fontsize=14)
+plt.ylabel('y[m]',fontsize=14)
 #plt.legend(loc='upper right')
 
 #plt.xlim([-5, 42.5])
