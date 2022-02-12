@@ -69,8 +69,8 @@ max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
 #zeta=1/dt      # parameter for C/Ginv and C/GMRES
 zeta_CGinv=1/SamplingT*20
 
-delta=SamplingT/20    # Window width to catch sampling period timing
-                      # Try (Sampling period)/20 or (Sampling period)/30
+delta = dt/1.5    # Window width to catch sampling period timing
+                  # Try dt/1.2 to dt/1.5
 
 ####################
 ##  Initial state ##
@@ -764,7 +764,7 @@ t_list_CGMRES=t_list
 
 
 print()
-print('Horizon T=',T,', Sampling Period=',SamplingT)
+print('Horizon T=',T,', Sampling period =',SamplingT)
 print('N=',N,', input_dim=',input_dim, ', state_dim=',state_dim)
 
 
@@ -782,6 +782,7 @@ print('|t={:.3g}'.format(t[min_index_CGinv]),end='')
 print(')={:.4g}'.format(calc_time_CGinv[min_index_CGinv]),'[sec]')
 
 print('Average calculation time:',avg_calc_time_CGinv,'[sec]')
+print('zeta=',zeta_CGinv*SamplingT,'/(Sampling period)')
 
 
 
@@ -799,6 +800,7 @@ print('|t={:.3g}'.format(t[min_index]),end='')
 print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
+print('zeta=',zeta_CGMRES*SamplingT,'/(Sampling period)')
 print()
 
 
