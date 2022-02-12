@@ -39,7 +39,7 @@ The codes DO NOT put emphasis on taking full advantage of Python language for sp
 ## Citing C/Ginv
 
 
-#comming soon.
+#coming soon.
 
 
 ## License
