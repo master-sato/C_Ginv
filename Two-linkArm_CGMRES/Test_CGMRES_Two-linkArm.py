@@ -62,9 +62,10 @@ dt=0.0001           # Time step for evolution of actual time [s]
 Tf=3           # Simulation time [s]
 iter=int((Tf-t0)/dt)   # iteration of simulation (for loop iteration)
 zeta=1/SamplingT      # parameter for C/GMRES
+zeta=1/dt
 
-delta=SamplingT/20    # Window width to catch sampling period timing.
-                      # Try (Sampling period)/20 or (Sampling period)/30.
+delta = dt/1.5    # Window width to catch sampling period timing
+                  # Try dt/1.2 to dt/1.5
 
 ## parameters for GMRES and Newton type methods ##
 tol = 1e-5           # terminates iteration when norm(Func) < tol
@@ -370,7 +371,8 @@ print('|t={:.3g}'.format(t[min_index]),end='')
 print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
-print('Horizon T=',T,', Sampling Time =',SamplingT)
+print('Horizon T=',T,', Sampling period =',SamplingT)
+print('zeta=',zeta*SamplingT,'/(Sampling period)')
 print('N=',N,', input_dim=',input_dim)
 print('Q=')
 print(Q)
