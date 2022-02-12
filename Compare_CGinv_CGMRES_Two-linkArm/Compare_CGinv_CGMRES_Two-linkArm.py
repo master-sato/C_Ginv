@@ -9,6 +9,8 @@ Made in Feb. 2022 ver. 0.1
             sampling period (SamplingT). The input value is on hold
             till the next sampling peirod, making a discrete input
             to a continuous state equation.
+        Fer. 2022 ver. 0.2.1
+            Bug fixed.
 
 
 BSD 2-Clause License
@@ -57,16 +59,17 @@ state_dim=4    # state dimension
 input_dim=2    # input dimension
 
 t0=0.0         # initial time [s]
-T=0.1         # Horizon [s]
+T=0.15         # Horizon [s]
 N=4            # Integration steps within the MPC computation
 
-SamplingT=0.025   # Sampling period [s]
-dt=0.0001           # Time step for evolution of actual time [s]
+SamplingT=0.02   # Sampling period [s]
+dt=0.001           # Time step for evolution of actual time [s]
 Tf=1.0           # Simulation time [s]
 max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
-zeta=1/dt      # parameter for C/Ginv and C/GMRES
+#zeta=1/dt      # parameter for C/Ginv and C/GMRES
+zeta_CGinv=1/SamplingT*20
 
-delta=SamplingT/30    # Window width to catch sampling period timing
+delta=SamplingT/20    # Window width to catch sampling period timing
                       # Try (Sampling period)/20 or (Sampling period)/30
 
 ####################
@@ -108,6 +111,85 @@ diff_order=2   # k of u^(k)=0
 tol_CGinv = 1e-5           # terminates iteration when norm(Func) < tol
 max_iter_GaussNewton = 15  # maximum iteration of Gauss-Newton method
 k_CGinv = 1                # damping coefficient inside Gauss-Newton method
+
+
+
+
+
+
+#############################################
+#############################################
+#############################################
+##   Parameters for  C/GMRES simulation    ##
+#############################################
+#############################################
+
+zeta_CGMRES=1/SamplingT*10
+
+
+########################################
+## J= x(t+T)^T*S*x(t+T)/2             ##
+##   +Int[x^T*Q*x/2+u^T*R*u/2]dt      ##
+########################################
+Q=np.eye(state_dim, state_dim)
+R=np.eye(input_dim, input_dim)
+S=np.eye(state_dim, state_dim)
+
+Q[0,0]=40
+Q[1,1]=20
+Q[2,2]=0.01
+Q[3,3]=0.01
+
+R[0,0]=0.03
+R[1,1]=0.03
+
+S[0,0]=4
+S[1,1]=2
+S[2,2]=0.001
+S[3,3]=0.001
+
+
+
+
+
+
+
+Q[0,0]=40
+Q[1,1]=20
+Q[2,2]=0.01
+Q[3,3]=0.01
+
+R[0,0]=0.1
+R[1,1]=0.1
+
+S[0,0]=4
+S[1,1]=2
+S[2,2]=0.001
+S[3,3]=0.001
+
+
+
+
+
+## parameters for Iteration methods
+tol_CGMRES = 1e-5           # terminates iteration when norm(Func) < tol
+max_iter_Newton = 15  # maximum iteration of Gauss-Newton method
+max_iter_FDGMRES = 2  # maximum iteration of Gauss-Newton method
+k_CGMRES = 1                # damping coefficient inside Gauss-Newton method
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ##################################
 ##            u^(2)=0          ###
@@ -152,81 +234,6 @@ class dUdt:
             dUdt[input_dim*diff_order-1-i]=0
 
         return dUdt
-
-
-
-
-
-
-
-
-#############################################
-#############################################
-#############################################
-##   Parameters for  C/GMRES simulation    ##
-#############################################
-#############################################
-########################################
-## J= x(t+T)^T*S*x(t+T)/2             ##
-##   +Int[x^T*Q*x/2+u^T*R*u/2]dt      ##
-########################################
-Q=np.eye(state_dim, state_dim)
-R=np.eye(input_dim, input_dim)
-S=np.eye(state_dim, state_dim)
-
-Q[0,0]=40
-Q[1,1]=20
-Q[2,2]=0.01
-Q[3,3]=0.01
-
-R[0,0]=0.03
-R[1,1]=0.03
-
-S[0,0]=4
-S[1,1]=2
-S[2,2]=0.001
-S[3,3]=0.001
-
-
-
-
-
-
-
-Q[0,0]=40
-Q[1,1]=20
-Q[2,2]=0.01
-Q[3,3]=0.01
-
-R[0,0]=0.05
-R[1,1]=0.05
-
-S[0,0]=4
-S[1,1]=2
-S[2,2]=0.001
-S[3,3]=0.001
-
-
-
-
-
-## parameters for Iteration methods
-tol_CGMRES = 1e-5           # terminates iteration when norm(Func) < tol
-max_iter_Newton = 15  # maximum iteration of Gauss-Newton method
-max_iter_FDGMRES = 2  # maximum iteration of Gauss-Newton method
-k_CGMRES = 1                # damping coefficient inside Gauss-Newton method
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -338,8 +345,7 @@ Ctrler=C_Ginv(plant, UFunc.Kth_order, input_dim)
 ##  state :  x ##
 #################
 x=np.zeros([max_iter+1,state_dim])
-x[0,0]=x_init[0]
-x[0,1]=x_init[1]
+x[0,:]=x_init
 
 
 ##############
@@ -441,8 +447,8 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete=0
-t_prev=t[0]
+u_discrete = u[0]
+t_prev = t[0]
 for i in range(1,max_iter):
     if SamplingT - delta < abs(t[i]-t_prev) and\
        abs(t[i]-t_prev) < SamplingT + delta:
@@ -450,7 +456,7 @@ for i in range(1,max_iter):
         ### MPC computation     ####
         ############################
         t_start = time.time()
-        u_discrete = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N,dt,zeta)
+        u_discrete = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N,dt,zeta_CGinv)
         t_end = time.time()
         calc_time_list.append(t_end-t_start)
         t_list.append(t[i])
@@ -517,7 +523,7 @@ t_list_CGinv=t_list
 
 
 
-
+#exit()
 
 
 
@@ -583,8 +589,7 @@ Ctrler=C_GMRES(plant,state_dim, input_dim,Q,R,S)
 ##  state :  x ##
 #################
 x=np.zeros([max_iter+1,state_dim])
-x[0,0]=x_init[0]
-x[0,1]=x_init[1]
+x[0,:]=x_init
 
 
 ##############
@@ -614,6 +619,13 @@ t[0]=t0
 #################################
 t_list=[]
 calc_time_list=[]
+
+
+#####################################################
+## list for graph of how many times F is evaluated ##
+#####################################################
+eval_count_list = []
+
 
 
 ###################################
@@ -649,7 +661,7 @@ u[0] = Ctrler.u_init(x[0], x_ref, t[0], T, U_init, N, tolerance=tol_CGMRES, max_
 t_end = time.time()
 calc_time_list.append(t_end-t_start)
 t_list.append(t[0])
-
+eval_count_list.append(Ctrler.F.eval_count)
 
 ## displaying some results ##
 print('t:{:.4g}'.format(t[0]),'[s] | u[',0,'] =',u[0])
@@ -684,8 +696,8 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete=0
-t_prev=t[0]
+u_discrete = u[0]
+t_prev = t[0]
 for i in range(1,max_iter):
 #for i in range(1,2):
     if SamplingT - delta < abs(t[i]-t_prev) and\
@@ -694,10 +706,11 @@ for i in range(1,max_iter):
         ### MPC computation     ####
         ############################
         t_start = time.time()
-        u_discrete = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N, dt,zeta,tol_CGMRES, max_iter_FDGMRES)
+        u_discrete = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N, dt,zeta_CGMRES,tol_CGMRES, max_iter_FDGMRES)
         t_end = time.time()
         calc_time_list.append(t_end-t_start)
         t_list.append(t[i])
+        eval_count_list.append(Ctrler.F.eval_count)
 
         ## displaying some results ##
         print('t:{:.5g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
@@ -826,6 +839,18 @@ print('S=',S)
 
 
 
+fig = plt.figure()
+
+plt.plot(t_list,eval_count_list)
+#plt.axhline(y=SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
+plt.xlabel('time[s]', fontsize=14)
+plt.ylabel('Number of times F is evaluated.', fontsize=14)
+
+plt.grid()
+#plt.legend()
+#plt.axes().set_aspect('equal')
+#fig.savefig(file_name+'F_count.png', pad_inches=0.0)
+plt.show()
 
 
 
@@ -840,12 +865,12 @@ fig = plt.figure()
 plt.plot(t_list_CGinv,1000*calc_time_CGinv,label='C/Ginv',linestyle='solid')
 plt.plot(t_list_CGMRES,1000*calc_time_CGMRES,label='C/GMRES',linestyle='--')
 plt.axhline(y=1000*SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
-plt.xlabel('Time[s]')
-plt.ylabel('Computation time[ms]')
+plt.xlabel('Time[s]', fontsize=14)
+plt.ylabel('Computation time[ms]', fontsize=14)
 
 plt.grid()
 plt.legend()
-#fig.savefig(file_name+'_CalcTime.png', pad_inches=0.0)
+fig.savefig(file_name+'_CalcTime.png', pad_inches=0.0)
 plt.show()
 
 
@@ -872,12 +897,12 @@ plt.axhline(y=x_ref[1], xmin=0.0, xmax=Tf, linestyle='dotted')
 
 
 
-plt.ylabel('[rad]')
-plt.xlabel('Time[s]')
+plt.ylabel('[rad]', fontsize=14)
+plt.xlabel('Time[s]', fontsize=14)
 
 plt.grid()
 plt.legend()
-#fig.savefig(file_name+'_Theta.png', pad_inches=0.0)
+fig.savefig(file_name+'_Theta.png', pad_inches=0.0)
 plt.show()
 
 
@@ -904,12 +929,12 @@ plt.plot(t[:],u_CGinv[:,1], label='u2 (C/Ginv)',linestyle='--')
 plt.plot(t[:],u_CGMRES[:,0], label='u1 (C/GMRES)',linestyle='-.')
 plt.plot(t[:],u_CGMRES[:,1], label='u2 (C/GMRES)',linestyle=':')
 
-plt.xlabel('Time[s]')
-plt.ylabel('[Nm]')
+plt.xlabel('Time[s]', fontsize=14)
+plt.ylabel('[Nm]', fontsize=14)
 
 plt.grid()
 plt.legend()
 plt.show()
-#fig.savefig(file_name+'_Inputs.png', pad_inches=0.0)
+fig.savefig(file_name+'_Inputs.png', pad_inches=0.0)
 
 
