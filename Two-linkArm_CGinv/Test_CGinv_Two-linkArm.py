@@ -7,6 +7,8 @@ Made in Feb. 2022 ver.0.1
             sampling period (SamplingT). The input value is on hold
             till the next sampling peirod, making a discrete input
             to a continuous state equation.
+        Feb. 2022 ver. 0.2.1
+            Bug fixed.
 
 
 BSD 2-Clause License
@@ -58,7 +60,7 @@ SamplingT=0.0125     # Sampling period [s]
 dt=0.001           # Time step for time evolution [s]
 Tf=5              # Simulation duration [s]
 max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
-zeta = 1/dt       # damping parameter for C/Ginv
+zeta = 1/SamplingT       # damping parameter for C/Ginv
 
 delta=SamplingT/20    # Window width to catch sampling period timing
                       # Try (Sampling period)/10 to (Sampling period)/30
@@ -351,8 +353,8 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete=0
-t_prev=t[0]
+u_discrete = u[0]
+t_prev = t[0]
 for i in range(1,max_iter):
     if SamplingT - delta < t[i]-t_prev and\
        t[i]-t_prev < SamplingT + delta:
@@ -459,9 +461,9 @@ print('N=',N,', diff_order=',diff_order,', input_dim=',input_dim)
 fig = plt.figure()
 
 plt.plot(t_list,calc_time_list)
-plt.axhline(y=dt, xmin=0.0, xmax=Tf, linestyle='dotted')
-plt.xlabel('time[s]')
-plt.ylabel('Computation time[s]')
+plt.axhline(y=SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
+plt.xlabel('time[s]', fontsize=14)
+plt.ylabel('Computation time[s]', fontsize=14)
 
 plt.grid()
 #fig.savefig(file_name+'CalcTime.png', pad_inches=0.0)
@@ -488,8 +490,8 @@ plt.axhline(y=x_ref[1], xmin=0.0, xmax=Tf, linestyle='dotted')
 
 
 
-plt.ylabel('[rad]')
-plt.xlabel('time[s]')
+plt.ylabel('[rad]', fontsize=14)
+plt.xlabel('time[s]', fontsize=14)
 
 plt.grid()
 plt.legend()
@@ -510,8 +512,8 @@ fig = plt.figure()
 
 plt.plot(t, u[:,0], label='u1')
 plt.plot(t, u[:,1], label='u2',linestyle='dashed')
-plt.xlabel('time[s]')
-plt.ylabel('[Nm]')
+plt.xlabel('time[s]', fontsize=14)
+plt.ylabel('[Nm]', fontsize=14)
 
 plt.grid()
 plt.legend()
