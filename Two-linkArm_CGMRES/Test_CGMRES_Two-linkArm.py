@@ -8,6 +8,8 @@ Made in Feb. 2022 ver. 0.1
             sampling period (SamplingT). The input value is on hold
             till the next sampling peirod, making a discrete input
             to a continuous state equation.
+        Feb. 2022 ver. 0.2.1
+            Bug fixed.
 
 
 BSD 2-Clause License
@@ -59,7 +61,7 @@ SamplingT=0.03   # Sampling period [s]
 dt=0.0001           # Time step for evolution of actual time [s]
 Tf=3           # Simulation time [s]
 iter=int((Tf-t0)/dt)   # iteration of simulation (for loop iteration)
-zeta=1/dt      # parameter for C/GMRES
+zeta=1/SamplingT      # parameter for C/GMRES
 
 delta=SamplingT/20    # Window width to catch sampling period timing.
                       # Try (Sampling period)/20 or (Sampling period)/30.
@@ -310,8 +312,8 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete=0
-t_prev=t[0]
+u_discrete = u[0]
+t_prev = t[0]
 for i in range(1,iter):
     if SamplingT - delta < t[i]-t_prev and\
        t[i]-t_prev < SamplingT + delta:
@@ -368,7 +370,7 @@ print('|t={:.3g}'.format(t[min_index]),end='')
 print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
-print('Horizon T=',T,', Sampling Time dt=',dt)
+print('Horizon T=',T,', Sampling Time =',SamplingT)
 print('N=',N,', input_dim=',input_dim)
 print('Q=')
 print(Q)
@@ -401,8 +403,8 @@ fig = plt.figure()
 
 plt.plot(t_list,calc_time_list)
 plt.axhline(y=SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
-plt.xlabel('time[s]')
-plt.ylabel('Computation time[s]')
+plt.xlabel('time[s]', fontsize=14)
+plt.ylabel('Computation time[s]', fontsize=14)
 
 plt.grid()
 plt.legend()
@@ -424,8 +426,8 @@ plt.axhline(y=x_ref[1], xmin=0.0, xmax=Tf, linestyle='dotted')
 
 
 
-plt.ylabel('[rad]')
-plt.xlabel('time[s]')
+plt.ylabel('[rad]', fontsize=14)
+plt.xlabel('time[s]', fontsize=14)
 
 plt.grid()
 plt.legend()
@@ -450,8 +452,8 @@ fig = plt.figure()
 plt.plot(t, x[:,2], label='theta1_dot', marker='')
 plt.plot(t, x[:,3], label='theta2_dot', marker='',linestyle='dashed')
 
-plt.xlabel('time[s]')
-plt.ylabel('[rad/s]')
+plt.xlabel('time[s]', fontsize=14)
+plt.ylabel('[rad/s]', fontsize=14)
 
 plt.grid()
 plt.legend()
@@ -473,8 +475,8 @@ fig = plt.figure()
 #plt.plot(times, u_list[:,1], label='u2',linestyle='dashed')
 plt.plot(t[:-1], u[:,0], label='u1')
 plt.plot(t[:-1], u[:,1], label='u2',linestyle='dashed')
-plt.xlabel('time[s]')
-plt.ylabel('[Nm]')
+plt.xlabel('time[s]', fontsize=14)
+plt.ylabel('[Nm]', fontsize=14)
 
 plt.grid()
 plt.legend()
