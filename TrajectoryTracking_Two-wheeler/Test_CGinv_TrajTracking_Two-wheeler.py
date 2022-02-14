@@ -53,18 +53,15 @@ input_dim=2    # input dimension
 diff_order=2   # k of u^(k)=0
 
 t0=0.0         # initial time [s]
-T=0.14         # Horizon [s]
+T=0.13         # Horizon [s]
 N=3            # Integration steps within the MPC computation
 
 SamplingT=0.005   # Sampling period [s]
-dt=0.0001           # Time step for actual time evolution [s]
-Tf=30          # Simulation time [s]
+dt=0.0001         # Time step for actual time evolution [s]
+Tf=30            # Simulation duration [s]
 max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
-#zeta=1/dt
 zeta=1/SamplingT*5.0       # parameter for C/Ginv
-#zeta=1/SamplingT*2.50       # parameter for C/Ginv
-#zeta=1/dt
-#zeta=1000
+#zeta=1/SamplingT*50.0       # parameter for C/Ginv
 
 delta = dt/1.5    # Window width to catch sampling period timing
                   # Try dt/1.2 to dt/1.5
@@ -380,7 +377,7 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete = u[0]
+u_ZOH = u[0]
 t_prev = t[0]
 for i in range(1,max_iter):
     if SamplingT - delta < t[i]-t_prev and\
@@ -389,13 +386,13 @@ for i in range(1,max_iter):
         ### MPC computation     ####
         ############################
         t_start = time.time()
-        u_discrete = Ctrler.u(x[i],x_ref[i],t[i],T,Ctrler.U,N,dt,zeta)
+        u_ZOH = Ctrler.u(x[i],x_ref[i],t[i],T,Ctrler.U,N,dt,zeta)
         t_end = time.time()
         calc_time_list.append(t_end-t_start)
         t_list.append(t[i])
 
         ## displaying some results ##
-        print('t:{:.3g}'.format(t[i]),'[s] | u[',i,'] =',u_discrete)
+        print('t:{:.3g}'.format(t[i]),'[s] | u[',i,'] =',u_ZOH)
         print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
         print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
         print('   N =',N,', Horizon=',T,'[s]')
@@ -410,7 +407,7 @@ for i in range(1,max_iter):
     #####################################
     ### time evolution of real plant ####
     #####################################
-    u[i] = u_discrete
+    u[i] = u_ZOH
     x[i+1]=x[i]+plant(t[i],x[i], u[i])*dt
     t[i+1]=t[i]+dt
     
@@ -437,7 +434,7 @@ print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
 print('Horizon T=',T,', Sampling period =',SamplingT)
-print('zeta=',zeta*SamplingT,'/(Sampling period)')
+print('zeta=',zeta,'=',zeta*SamplingT,'/(Sampling period)')
 print('N=',N,', diff_order=',diff_order,', input_dim=',input_dim)
 
 
