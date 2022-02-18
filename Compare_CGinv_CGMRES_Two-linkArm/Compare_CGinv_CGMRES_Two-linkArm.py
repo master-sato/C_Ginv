@@ -4,12 +4,7 @@ Comparison of Continuation/Generalized-inverse (G/Ginv) method
  Two-link Arm system
  
 Made in Feb. 2022 ver. 0.1
-        Feb. 2022 ver. 0.2
-            Splitting time step (dt) of system time evolution and
-            sampling period (SamplingT). The input value is on hold
-            till the next sampling peirod, making a discrete input
-            to a continuous state equation.
-        Fer. 2022 ver. 0.2.1
+        Fer. 2022 ver. 0.1.1
             Bug fixed.
 
 
@@ -62,15 +57,11 @@ t0=0.0         # initial time [s]
 T=0.15         # Horizon [s]
 N=4            # Integration steps within the MPC computation
 
-SamplingT=0.02   # Sampling period [s]
-dt=0.001           # Time step for evolution of actual time [s]
-Tf=1.0           # Simulation time [s]
+dt=0.01        # Time step for evolution of actual time [s]
+Tf=1.0           # Simulation duration [s]
 max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
-#zeta=1/dt      # parameter for C/Ginv and C/GMRES
-zeta_CGinv=1/SamplingT*20
+zeta_CGinv=1/dt
 
-delta = dt/1.5    # Window width to catch sampling period timing
-                  # Try dt/1.2 to dt/1.5
 
 ####################
 ##  Initial state ##
@@ -91,7 +82,7 @@ x_ref=np.zeros(state_dim)
 
 
 ## file_name for saving graphs ##
-file_name='Compare_Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(SamplingT)
+file_name='Compare_Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(dt)
 
 
 
@@ -105,7 +96,7 @@ file_name='Compare_Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(SamplingT)
 #############################################
 #############################################
 #############################################
-diff_order=2   # k of u^(k)=0
+diff_order=2               # k of u^(k)=0
 
 ## parameters for Gauss-Newton methods
 tol_CGinv = 1e-5           # terminates iteration when norm(Func) < tol
@@ -124,7 +115,7 @@ k_CGinv = 1                # damping coefficient inside Gauss-Newton method
 #############################################
 #############################################
 
-zeta_CGMRES=1/SamplingT*10
+zeta_CGMRES=1/dt
 
 
 ########################################
@@ -447,40 +438,34 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete = u[0]
-t_prev = t[0]
 for i in range(1,max_iter):
-    if SamplingT - delta < abs(t[i]-t_prev) and\
-       abs(t[i]-t_prev) < SamplingT + delta:
-        ############################
-        ### MPC computation     ####
-        ############################
-        t_start = time.time()
-        u_discrete = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N,dt,zeta_CGinv)
-        t_end = time.time()
-        calc_time_list.append(t_end-t_start)
-        t_list.append(t[i])
+    ############################
+    ### MPC computation     ####
+    ############################
+    t_start = time.time()
+    u[i] = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N,dt,zeta_CGinv)
+    t_end = time.time()
+    calc_time_list.append(t_end-t_start)
+    t_list.append(t[i])
 
 
-        ## displaying some results ##
-        print('t:{:.5g}'.format(t[i]),'[s] | u[',i,'] =',u_discrete)
-        print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
-        print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-        print('   N =',N,', Horizon=',T,'[s]')
-        F=Ctrler.F(t[i],x[i],Ctrler.U)
-        print('   |F(t,x,U)|=',np.linalg.norm(F))
-        print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
-        print()
+    ## displaying some results ##
+    print('t:{:.5g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
+    print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
+    print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
+    print('   N =',N,', Horizon=',T,'[s]')
+    F=Ctrler.F(t[i],x[i],Ctrler.U)
+    print('   |F(t,x,U)|=',np.linalg.norm(F))
+    print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
+    print()
 
-        t_prev = t[i]
-
+ 
 
 
 
     #####################################
     ### time evolution of real plant ####
     #####################################
-    u[i] = u_discrete
     x[i+1]=x[i]+plant(t[i],x[i], u[i])*dt
     t[i+1]=t[i]+dt
     
@@ -696,40 +681,33 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete = u[0]
-t_prev = t[0]
 for i in range(1,max_iter):
-#for i in range(1,2):
-    if SamplingT - delta < abs(t[i]-t_prev) and\
-       abs(t[i]-t_prev) < SamplingT + delta:
-        ############################
-        ### MPC computation     ####
-        ############################
-        t_start = time.time()
-        u_discrete = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N, dt,zeta_CGMRES,tol_CGMRES, max_iter_FDGMRES)
-        t_end = time.time()
-        calc_time_list.append(t_end-t_start)
-        t_list.append(t[i])
-        eval_count_list.append(Ctrler.F.eval_count)
+    ############################
+    ### MPC computation     ####
+    ############################
+    t_start = time.time()
+    u[i] = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N, dt,zeta_CGMRES,tol_CGMRES, max_iter_FDGMRES)
+    t_end = time.time()
+    calc_time_list.append(t_end-t_start)
+    t_list.append(t[i])
+    eval_count_list.append(Ctrler.F.eval_count)
 
-        ## displaying some results ##
-        print('t:{:.5g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
-        print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
-        print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-        print('   N =',N,', Horizon=',T,'[s]')
-        F=Ctrler.F(t[i],x[i],Ctrler.U)
-        print('   |F(t,x,U)|=',np.linalg.norm(F))
-        print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
-        print()
+    ## displaying some results ##
+    print('t:{:.5g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
+    print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
+    print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
+    print('   N =',N,', Horizon=',T,'[s]')
+    F=Ctrler.F(t[i],x[i],Ctrler.U)
+    print('   |F(t,x,U)|=',np.linalg.norm(F))
+    print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
+    print()
 
-        t_prev = t[i]
 
 
 
     #####################################
     ### time evolution of real plant ####
     #####################################
-    u[i] = u_discrete
     x[i+1] = x[i] + plant(t[i],x[i], u[i]) * dt
     t[i+1] = t[i] + dt
     
@@ -764,7 +742,7 @@ t_list_CGMRES=t_list
 
 
 print()
-print('Horizon T=',T,', Sampling period =',SamplingT)
+print('Horizon T=',T,', dt =',dt)
 print('N=',N,', input_dim=',input_dim, ', state_dim=',state_dim)
 
 
@@ -782,7 +760,7 @@ print('|t={:.3g}'.format(t[min_index_CGinv]),end='')
 print(')={:.4g}'.format(calc_time_CGinv[min_index_CGinv]),'[sec]')
 
 print('Average calculation time:',avg_calc_time_CGinv,'[sec]')
-print('zeta=',zeta_CGinv*SamplingT,'/(Sampling period)')
+print('zeta=',zeta_CGinv,'=',zeta_CGinv*dt,'/(dt)')
 
 
 
@@ -800,7 +778,7 @@ print('|t={:.3g}'.format(t[min_index]),end='')
 print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
-print('zeta=',zeta_CGMRES*SamplingT,'/(Sampling period)')
+print('zeta=',zeta_CGMRES,'=',zeta_CGMRES*dt,'/(dt)')
 print()
 
 
@@ -844,7 +822,6 @@ print('S=',S)
 fig = plt.figure()
 
 plt.plot(t_list,eval_count_list)
-#plt.axhline(y=SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
 plt.xlabel('time[s]', fontsize=14)
 plt.ylabel('Number of times F is evaluated.', fontsize=14)
 
@@ -866,7 +843,7 @@ fig = plt.figure()
 
 plt.plot(t_list_CGinv,1000*calc_time_CGinv,label='C/Ginv',linestyle='solid')
 plt.plot(t_list_CGMRES,1000*calc_time_CGMRES,label='C/GMRES',linestyle='--')
-plt.axhline(y=1000*SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
+plt.axhline(y=1000*dt, xmin=0.0, xmax=Tf, linestyle='dotted')
 plt.xlabel('Time[s]', fontsize=14)
 plt.ylabel('Computation time[ms]', fontsize=14)
 
