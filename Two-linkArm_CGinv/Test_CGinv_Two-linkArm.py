@@ -2,12 +2,7 @@
 Example of Continuation/Generalized-inverse (G/Ginv) method
 (Two-link arm)
 Made in Feb. 2022 ver.0.1
-        Feb. 2022 ver. 0.2
-            Splitting time step (dt) of system time evolution and
-            sampling period (SamplingT). The input value is on hold
-            till the next sampling peirod, making a discrete input
-            to a continuous state equation.
-        Feb. 2022 ver. 0.2.1
+        Feb. 2022 ver. 0.1.1
             Bug fixed.
 
 
@@ -53,18 +48,15 @@ input_dim=2       # input dimension
 diff_order=2      # k of u^(k)=0
 
 t0=0.0            # initial time [s]
-T=0.2             # Horizon [s]
+T=0.15             # Horizon [s]
 N=state_dim               # Integration steps within the MPC computation
 
-SamplingT=0.1     # Sampling period [s]
-dt=0.0001           # Time step for time evolution [s]
-Tf=1              # Simulation duration [s]
+dt=0.01           # Time step for time evolution [s]
+Tf=3              # Simulation duration [s]
 max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
-zeta = 1/SamplingT*(SamplingT/dt)       # damping parameter for C/Ginv
+#zeta = 1/SamplingT       # damping parameter for C/Ginv
 zeta = 1/dt
 
-delta = dt/1.5    # Window width to catch sampling period timing
-                  # Try dt/1.2 to dt/1.5
 
 
 ## parameters for Gauss-Newton methods ##
@@ -83,6 +75,9 @@ file_name='CGinv_Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(dt)+'DiffOrd'+str(dif
 x_init=np.zeros(state_dim)
 x_init[0]=-np.pi/180*45
 x_init[1]=-np.pi/180*60
+
+x_init[0]=-np.pi/180*60
+x_init[1]=-np.pi/180*90
 
 
 ###################
@@ -354,32 +349,27 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete = u[0]
-t_prev = t[0]
 for i in range(1,max_iter):
-    if SamplingT - delta < t[i]-t_prev and\
-       t[i]-t_prev < SamplingT + delta:
-        ############################
-        ### MPC computation     ####
-        ############################
-        t_start = time.time()
-        u_discrete = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N,dt,zeta)
-        t_end = time.time()
-        calc_time_list.append(t_end-t_start)
-        t_list.append(t[i])
+    ############################
+    ### MPC computation     ####
+    ############################
+    t_start = time.time()
+    u[i] = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N,dt,zeta)
+    t_end = time.time()
+    calc_time_list.append(t_end-t_start)
+    t_list.append(t[i])
 
 
-        ## displaying some results ##
-        print('t:{:.5g}'.format(t[i]),'[s] | u[',i,'] =',u_discrete)
-        print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
-        print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-        print('   N =',N,', Horizon=',T,'[s]')
-        F=Ctrler.F(t[i],x[i],Ctrler.U)
-        print('   |F(t,x,U)|=',np.linalg.norm(F))
-        print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
-        print()
+    ## displaying some results ##
+    print('t:{:.5g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
+    print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
+    print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
+    print('   N =',N,', Horizon=',T,'[s]')
+    F=Ctrler.F(t[i],x[i],Ctrler.U)
+    print('   |F(t,x,U)|=',np.linalg.norm(F))
+    print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
+    print()
 
-        t_prev = t[i]
 
 
 
@@ -387,7 +377,7 @@ for i in range(1,max_iter):
     #####################################
     ### time evolution of real plant ####
     #####################################
-    u[i] = u_discrete
+#    u[i] = u_ZOH
     x[i+1]=x[i]+plant(t[i],x[i], u[i])*dt
     t[i+1]=t[i]+dt
     
@@ -413,11 +403,11 @@ print('|t={:.3g}'.format(t[min_index]),end='')
 print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
-print('Horizon T=',T,', Sampling period =',SamplingT)
-print('zeta=',zeta*SamplingT,'/(Sampling period)')
-print('SamplingT/dt=',SamplingT/dt)
+print('Horizon T=',T)
+print('zeta*dt=',zeta*dt)
 print('N=',N,', diff_order=',diff_order,', input_dim=',input_dim)
-
+print()
+print()
 
 
 
@@ -464,8 +454,8 @@ print('N=',N,', diff_order=',diff_order,', input_dim=',input_dim)
 fig = plt.figure()
 
 plt.plot(t_list,calc_time_list)
-plt.axhline(y=SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
-plt.xlabel('time[s]', fontsize=14)
+plt.axhline(y=dt, xmin=0.0, xmax=Tf, linestyle='dotted')
+plt.xlabel('Time[s]', fontsize=14)
 plt.ylabel('Computation time[s]', fontsize=14)
 
 plt.grid()
@@ -494,7 +484,7 @@ plt.axhline(y=x_ref[1], xmin=0.0, xmax=Tf, linestyle='dotted')
 
 
 plt.ylabel('[rad]', fontsize=14)
-plt.xlabel('time[s]', fontsize=14)
+plt.xlabel('Time[s]', fontsize=14)
 
 plt.grid()
 plt.legend()
@@ -515,7 +505,7 @@ fig = plt.figure()
 
 plt.plot(t, u[:,0], label='u1')
 plt.plot(t, u[:,1], label='u2',linestyle='dashed')
-plt.xlabel('time[s]', fontsize=14)
+plt.xlabel('Time[s]', fontsize=14)
 plt.ylabel('[Nm]', fontsize=14)
 
 plt.grid()
