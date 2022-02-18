@@ -2,12 +2,7 @@
 Example of Continuation/Generalized-inverse (G/Ginv) method
 
 Made in Feb. 2022 ver. 0.1
-        Feb. 2022 ver. 0.2
-            Splitting time step (dt) of system time evolution and
-            sampling period (SamplingT). The input value is on hold
-            till the next sampling peirod, making a discrete input
-            to a continuous state equation.
-        Feb. 2022 ver. 0.2.1
+        Feb. 2022 ver. 0.1.1
             Bug fixed.
 
 
@@ -56,15 +51,11 @@ t0=0.0         # initial time [s]
 T=0.13         # Horizon [s]
 N=3            # Integration steps within the MPC computation
 
-SamplingT=0.005   # Sampling period [s]
-dt=0.0001         # Time step for actual time evolution [s]
+dt=0.005         # Time step for actual time evolution [s]
 Tf=30            # Simulation duration [s]
 max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
-zeta=1/SamplingT*5.0       # parameter for C/Ginv
-#zeta=1/SamplingT*50.0       # parameter for C/Ginv
+zeta=1/dt
 
-delta = dt/1.5    # Window width to catch sampling period timing
-                  # Try dt/1.2 to dt/1.5
 
 
 ## parameters for Gauss-Newton methods
@@ -74,7 +65,7 @@ k = 1                # damping coefficient inside Gauss-Newton method
 
 
 ## file_name for saving graphs ##
-file_name='CGinv_TrajTracking_Two-wheeler_T'+str(T)+'N'+str(N)+'dt'+str(SamplingT)+'DiffOrd'+str(diff_order)
+file_name='CGinv_TrajTracking_Two-wheeler_T'+str(T)+'N'+str(N)+'dt'+str(dt)+'DiffOrd'+str(diff_order)
 
 
 ## parameters of reference trajectory  ##
@@ -377,37 +368,31 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_ZOH = u[0]
-t_prev = t[0]
 for i in range(1,max_iter):
-    if SamplingT - delta < t[i]-t_prev and\
-       t[i]-t_prev < SamplingT + delta:
-        ############################
-        ### MPC computation     ####
-        ############################
-        t_start = time.time()
-        u_ZOH = Ctrler.u(x[i],x_ref[i],t[i],T,Ctrler.U,N,dt,zeta)
-        t_end = time.time()
-        calc_time_list.append(t_end-t_start)
-        t_list.append(t[i])
+    ############################
+    ### MPC computation     ####
+    ############################
+    t_start = time.time()
+    u[i] = Ctrler.u(x[i],x_ref[i],t[i],T,Ctrler.U,N,dt,zeta)
+    t_end = time.time()
+    calc_time_list.append(t_end-t_start)
+    t_list.append(t[i])
 
-        ## displaying some results ##
-        print('t:{:.3g}'.format(t[i]),'[s] | u[',i,'] =',u_ZOH)
-        print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
-        print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-        print('   N =',N,', Horizon=',T,'[s]')
-        F = Ctrler.F(t[i],x[i],Ctrler.U)
-        print('   |F(t,x,U)|=',np.linalg.norm(F))
-        print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref[i]))
-        print()
+    ## displaying some results ##
+    print('t:{:.3g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
+    print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
+    print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
+    print('   N =',N,', Horizon=',T,'[s]')
+    F = Ctrler.F(t[i],x[i],Ctrler.U)
+    print('   |F(t,x,U)|=',np.linalg.norm(F))
+    print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref[i]))
+    print()
 
-        t_prev = t[i]
 
 
     #####################################
     ### time evolution of real plant ####
     #####################################
-    u[i] = u_ZOH
     x[i+1]=x[i]+plant(t[i],x[i], u[i])*dt
     t[i+1]=t[i]+dt
     
@@ -433,8 +418,8 @@ print('|t={:.3g}'.format(t[min_index]),end='')
 print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
-print('Horizon T=',T,', Sampling period =',SamplingT)
-print('zeta=',zeta,'=',zeta*SamplingT,'/(Sampling period)')
+print('Horizon T=',T)
+print('zeta=',zeta)
 print('N=',N,', diff_order=',diff_order,', input_dim=',input_dim)
 
 
@@ -487,7 +472,7 @@ print('N=',N,', diff_order=',diff_order,', input_dim=',input_dim)
 fig = plt.figure()
 
 plt.plot(t_list,1000*calc_time_list)
-plt.axhline(y=1000*SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
+plt.axhline(y=1000*dt, xmin=0.0, xmax=Tf, linestyle='dotted')
 plt.xlabel('Time[s]', fontsize=14)
 plt.ylabel('Computation time[ms]', fontsize=14)
 
@@ -551,7 +536,7 @@ plt.xlabel('Time[s]', fontsize=14)
 plt.grid()
 plt.legend()
 plt.show()
-#fig.savefig(file_name+'_Inputs.png', pad_inches=0.0)
+fig.savefig(file_name+'_Inputs.png', pad_inches=0.0)
 
 
 
@@ -598,7 +583,7 @@ plt.legend(prop={'size':10}, loc='lower right')
 plt.axes().set_aspect('equal')
 plt.show()
 
-#fig.savefig(file_name+'[x,y].png', pad_inches=0.0)
+fig.savefig(file_name+'[x,y].png', pad_inches=0.0)
 
 
 
