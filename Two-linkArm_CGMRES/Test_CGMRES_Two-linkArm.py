@@ -3,12 +3,7 @@ Example of Continuation/GMRES (G/GMRES) method
 (Two-link arm)
 
 Made in Feb. 2022 ver. 0.1
-        Feb. 2022 ver. 0.2
-            Splitting time step (dt) of system time evolution and
-            sampling period (SamplingT). The input value is on hold
-            till the next sampling peirod, making a discrete input
-            to a continuous state equation.
-        Feb. 2022 ver. 0.2.1
+        Feb. 2022 ver. 0.1.1
             Bug fixed.
 
 
@@ -54,18 +49,13 @@ state_dim=4    # state dimension
 input_dim=2    # input dimension
 
 t0=0.0         # initial time [s]
-T=0.1         # Horizon [s]
+T=0.15         # Horizon [s]
 N=4           # Integration steps within the MPC computation
 
-SamplingT=0.03   # Sampling period [s]
-dt=0.0001           # Time step for evolution of actual time [s]
-Tf=3           # Simulation time [s]
+dt=0.01           # Time step for evolution of actual time [s]
+Tf=3           # Simulation duration [s]
 iter=int((Tf-t0)/dt)   # iteration of simulation (for loop iteration)
-zeta=1/SamplingT      # parameter for C/GMRES
-zeta=1/dt
-
-delta = dt/1.5    # Window width to catch sampling period timing
-                  # Try dt/1.2 to dt/1.5
+zeta=1/dt              # parameter for C/GMRES
 
 ## parameters for GMRES and Newton type methods ##
 tol = 1e-5           # terminates iteration when norm(Func) < tol
@@ -91,6 +81,9 @@ x_init=np.zeros(state_dim)
 x_init[0]=-np.pi/180*45
 x_init[1]=-np.pi/180*60
 
+#x_init[0]=-np.pi/180*60
+#x_init[1]=-np.pi/180*90
+
 
 
 ###################
@@ -107,6 +100,26 @@ Q=np.eye(state_dim, state_dim)
 R=np.eye(input_dim, input_dim)
 S=np.eye(state_dim, state_dim)
 
+
+# SamplingT=0.15, T=0.6, zeta=1/dt=1/0.001
+Q[0,0]=60
+Q[1,1]=40
+Q[2,2]=0.01
+Q[3,3]=0.01
+
+R[0,0]=100
+R[1,1]=100
+
+
+S[0,0]=2
+S[1,1]=1
+S[2,2]=0.001
+S[3,3]=0.001
+
+
+
+
+# SamplingT=0.02, T=0.15, zeta=10/SamplingT
 Q[0,0]=40
 Q[1,1]=20
 Q[2,2]=0.01
@@ -116,10 +129,17 @@ R[0,0]=0.1
 R[1,1]=0.1
 
 
-S[0,0]=4
-S[1,1]=2
+S[0,0]=2
+S[1,1]=1
 S[2,2]=0.001
 S[3,3]=0.001
+
+
+
+
+
+
+
 
 
 
@@ -313,31 +333,26 @@ Ctrler.F.eval_count = 0
 ############################
 ### loops 1 ~ max_iter  ####
 ############################
-u_discrete = u[0]
-t_prev = t[0]
 for i in range(1,iter):
-    if SamplingT - delta < t[i]-t_prev and\
-       t[i]-t_prev < SamplingT + delta:
-        ############################
-        ### MPC computation     ####
-        ############################
-        t_start = time.time()
-        u_discrete = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N, dt,zeta,tol, max_iter_FDGMRES)
-        t_end = time.time()
-        calc_time_list.append(t_end-t_start)
-        t_list.append(t[i])
+    ############################
+    ### MPC computation     ####
+    ############################
+    t_start = time.time()
+    u[i] = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N, dt,zeta,tol, max_iter_FDGMRES)
+    t_end = time.time()
+    calc_time_list.append(t_end-t_start)
+    t_list.append(t[i])
 
-        ## displaying some results ##
-        print('t:{:.4g}'.format(t[i]),'[s] | u[',i,'] =',u_discrete)
-        print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
-        print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-        print('   N =',N,', Horizon=',T,'[s]')
-        F=Ctrler.F(t[i],x[i],Ctrler.U)
-        print('   |F(t,x,U)|=',np.linalg.norm(F))
-        print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
-        print()
+    ## displaying some results ##
+    print('t:{:.4g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
+    print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
+    print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
+    print('   N =',N,', Horizon=',T,'[s]')
+    F=Ctrler.F(t[i],x[i],Ctrler.U)
+    print('   |F(t,x,U)|=',np.linalg.norm(F))
+    print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
+    print()
 
-        t_prev = t[i]
 
 
 
@@ -345,7 +360,6 @@ for i in range(1,iter):
     #####################################
     ### time evolution of real plant ####
     #####################################
-    u[i] = u_discrete
     x[i+1]=x[i]+plant(t[i],x[i], u[i])*dt
     t[i+1]=t[i]+dt
     
@@ -371,8 +385,8 @@ print('|t={:.3g}'.format(t[min_index]),end='')
 print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
-print('Horizon T=',T,', Sampling period =',SamplingT)
-print('zeta=',zeta*SamplingT,'/(Sampling period)')
+print('Horizon T=',T)
+print('zeta=',zeta)
 print('N=',N,', input_dim=',input_dim)
 print('Q=')
 print(Q)
@@ -404,12 +418,12 @@ print(S)
 fig = plt.figure()
 
 plt.plot(t_list,calc_time_list)
-plt.axhline(y=SamplingT, xmin=0.0, xmax=Tf, linestyle='dotted')
+plt.axhline(y=dt, xmin=0.0, xmax=Tf, linestyle='dotted')
 plt.xlabel('time[s]', fontsize=14)
 plt.ylabel('Computation time[s]', fontsize=14)
 
 plt.grid()
-plt.legend()
+#plt.legend()
 #plt.axes().set_aspect('equal')
 #fig.savefig(file_name+'CalcTime.png', pad_inches=0.0)
 plt.show()
