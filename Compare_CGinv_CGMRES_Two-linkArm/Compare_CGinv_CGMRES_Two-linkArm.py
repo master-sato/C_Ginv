@@ -54,13 +54,11 @@ state_dim=4    # state dimension
 input_dim=2    # input dimension
 
 t0=0.0         # initial time [s]
-T=0.15         # Horizon [s]
 N=4            # Integration steps within the MPC computation
 
 dt=0.01        # Time step for evolution of actual time [s]
 Tf=1.0           # Simulation duration [s]
 max_iter=int((Tf-t0)/dt)+1   # iteration of simulation (for loop iteration)
-zeta_CGinv=1/dt
 
 
 ####################
@@ -81,12 +79,6 @@ x_init[1]=-np.pi/180*60
 x_ref=np.zeros(state_dim)
 
 
-## file_name for saving graphs ##
-file_name='Compare_Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(dt)
-
-
-
-
 
 
 #############################################
@@ -96,7 +88,9 @@ file_name='Compare_Two-linkArm_T'+str(T)+'N'+str(N)+'dt'+str(dt)
 #############################################
 #############################################
 #############################################
-diff_order=2               # k of u^(k)=0
+diff_order=2         # k of u^(k)=0
+T_CGinv=0.13         # Prediction horizon [s] for C/Ginv
+zeta_CGinv=1/dt      # coefficient for continuation method
 
 ## parameters for Gauss-Newton methods
 tol_CGinv = 1e-5           # terminates iteration when norm(Func) < tol
@@ -115,7 +109,8 @@ k_CGinv = 1                # damping coefficient inside Gauss-Newton method
 #############################################
 #############################################
 
-zeta_CGMRES=1/dt
+T_CGMRES=0.24       # Prediction horizon [s] for C/GMRES
+zeta_CGMRES=1/dt    # coefficient for continuation method
 
 
 ########################################
@@ -125,23 +120,6 @@ zeta_CGMRES=1/dt
 Q=np.eye(state_dim, state_dim)
 R=np.eye(input_dim, input_dim)
 S=np.eye(state_dim, state_dim)
-
-Q[0,0]=40
-Q[1,1]=20
-Q[2,2]=0.01
-Q[3,3]=0.01
-
-R[0,0]=0.03
-R[1,1]=0.03
-
-S[0,0]=4
-S[1,1]=2
-S[2,2]=0.001
-S[3,3]=0.001
-
-
-
-
 
 
 
@@ -161,6 +139,25 @@ S[3,3]=0.001
 
 
 
+Q[0,0]=40
+Q[1,1]=20
+Q[2,2]=0.01
+Q[3,3]=0.01
+
+R[0,0]=0.07
+R[1,1]=0.07
+
+S[0,0]=4
+S[1,1]=2
+S[2,2]=0.001
+S[3,3]=0.001
+
+
+
+
+
+
+
 
 ## parameters for Iteration methods
 tol_CGMRES = 1e-5           # terminates iteration when norm(Func) < tol
@@ -174,6 +171,8 @@ k_CGMRES = 1                # damping coefficient inside Gauss-Newton method
 
 
 
+## file_name for saving graphs ##
+file_name='Compare_Two-linkArm_TGinv'+str(T_CGinv)+'TGMRES'+str(T_CGMRES)+'N'+str(N)+'dt'+str(dt)
 
 
 
@@ -400,7 +399,7 @@ t_end=None
 ### MPC computation     ####
 ############################
 t_start = time.time()
-u[0] = Ctrler.u_init(x[0], x_ref, t[0], T, U_init, N, tolerance=tol_CGinv, max_iter=max_iter_GaussNewton, k=k_CGinv)
+u[0] = Ctrler.u_init(x[0], x_ref, t[0], T_CGinv, U_init, N, tolerance=tol_CGinv, max_iter=max_iter_GaussNewton, k=k_CGinv)
 t_end = time.time()
 calc_time_list.append(t_end-t_start)
 t_list.append(t[0])
@@ -411,7 +410,7 @@ t_list.append(t[0])
 print('t:{:.2g}'.format(t[0]),'[s] | u[',0,'] =',u[0])
 print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
 print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-print('   N =',N,', Horizon=',T,'[s]')
+print('   N =',N,', Horizon=',T_CGinv,'[s]')
 F=Ctrler.F(t[0],x[0],Ctrler.U)
 print('   |F(t,x,U)|=',np.linalg.norm(F))
 
@@ -443,7 +442,7 @@ for i in range(1,max_iter):
     ### MPC computation     ####
     ############################
     t_start = time.time()
-    u[i] = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N,dt,zeta_CGinv)
+    u[i] = Ctrler.u(x[i],x_ref,t[i],T_CGinv,Ctrler.U,N,dt,zeta_CGinv)
     t_end = time.time()
     calc_time_list.append(t_end-t_start)
     t_list.append(t[i])
@@ -453,7 +452,7 @@ for i in range(1,max_iter):
     print('t:{:.5g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
     print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
     print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-    print('   N =',N,', Horizon=',T,'[s]')
+    print('   N =',N,', Horizon=',T_CGinv,'[s]')
     F=Ctrler.F(t[i],x[i],Ctrler.U)
     print('   |F(t,x,U)|=',np.linalg.norm(F))
     print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
@@ -642,7 +641,7 @@ t_end=None
 ############################
 
 t_start = time.time()
-u[0] = Ctrler.u_init(x[0], x_ref, t[0], T, U_init, N, tolerance=tol_CGMRES, max_iter=max_iter_Newton, k=k_CGMRES)
+u[0] = Ctrler.u_init(x[0], x_ref, t[0], T_CGMRES, U_init, N, tolerance=tol_CGMRES, max_iter=max_iter_Newton, k=k_CGMRES)
 t_end = time.time()
 calc_time_list.append(t_end-t_start)
 t_list.append(t[0])
@@ -652,7 +651,7 @@ eval_count_list.append(Ctrler.F.eval_count)
 print('t:{:.4g}'.format(t[0]),'[s] | u[',0,'] =',u[0])
 print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
 print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-print('   N =',N,', Horizon=',T,'[s]')
+print('   N =',N,', Horizon=',T_CGMRES,'[s]')
 F = Ctrler.F(t[0],x[0],Ctrler.U)
 print('   |F(t,x,U)|=',np.linalg.norm(F))
 
@@ -686,7 +685,7 @@ for i in range(1,max_iter):
     ### MPC computation     ####
     ############################
     t_start = time.time()
-    u[i] = Ctrler.u(x[i],x_ref,t[i],T,Ctrler.U,N, dt,zeta_CGMRES,tol_CGMRES, max_iter_FDGMRES)
+    u[i] = Ctrler.u(x[i],x_ref,t[i],T_CGMRES,Ctrler.U,N, dt,zeta_CGMRES,tol_CGMRES, max_iter_FDGMRES)
     t_end = time.time()
     calc_time_list.append(t_end-t_start)
     t_list.append(t[i])
@@ -696,7 +695,7 @@ for i in range(1,max_iter):
     print('t:{:.5g}'.format(t[i]),'[s] | u[',i,'] =',u[i])
     print('   F(t,x,U):evaluation_count =',Ctrler.F.eval_count,'times')
     print('   calc time ={:.4g}'.format(t_end-t_start),'[s]')
-    print('   N =',N,', Horizon=',T,'[s]')
+    print('   N =',N,', Horizon=',T_CGMRES,'[s]')
     F=Ctrler.F(t[i],x[i],Ctrler.U)
     print('   |F(t,x,U)|=',np.linalg.norm(F))
     print('   |x[',i,']-x_ref|=',np.linalg.norm(x[i]-x_ref))
@@ -742,7 +741,9 @@ t_list_CGMRES=t_list
 
 
 print()
-print('Horizon T=',T,', dt =',dt)
+print('Horizon (C/Ginv)=',T_CGinv)
+print('Horizon (C/GMRES)=',T_CGMRES)
+print('dt =',dt)
 print('N=',N,', input_dim=',input_dim, ', state_dim=',state_dim)
 
 
@@ -760,7 +761,7 @@ print('|t={:.3g}'.format(t[min_index_CGinv]),end='')
 print(')={:.4g}'.format(calc_time_CGinv[min_index_CGinv]),'[sec]')
 
 print('Average calculation time:',avg_calc_time_CGinv,'[sec]')
-print('zeta=',zeta_CGinv,'=',zeta_CGinv*dt,'/(dt)')
+print('zeta=',zeta_CGinv,'=',zeta_CGinv*dt,'/dt')
 
 
 
@@ -778,7 +779,7 @@ print('|t={:.3g}'.format(t[min_index]),end='')
 print(')={:.4g}'.format(calc_time_list[min_index]),'[sec]')
 
 print('Average calculation time:',avg_calc_time,'[sec]')
-print('zeta=',zeta_CGMRES,'=',zeta_CGMRES*dt,'/(dt)')
+print('zeta=',zeta_CGMRES,'=',zeta_CGMRES*dt,'/dt')
 print()
 
 
@@ -866,10 +867,10 @@ plt.show()
 
 fig = plt.figure()
 
-plt.plot(t,x_CGinv[:,0], label='theta1 (C/Ginv)',linestyle='solid')
-plt.plot(t,x_CGinv[:,1], label='theta2 (C/Ginv)',linestyle='--')
-plt.plot(t,x_CGMRES[:,0], label='theta1 (C/GMRES)',linestyle='-.')
-plt.plot(t,x_CGMRES[:,1], label='theta2 (C/GMRES)',linestyle=':')
+plt.plot(t,x_CGinv[:,0], label=r'$\theta_1$ (C/Ginv)',linestyle='solid')
+plt.plot(t,x_CGinv[:,1], label=r'$\theta_2$ (C/Ginv)',linestyle='--')
+plt.plot(t,x_CGMRES[:,0], label=r'$\theta_1$ (C/GMRES)',linestyle='-.')
+plt.plot(t,x_CGMRES[:,1], label=r'$\theta_2$ (C/GMRES)',linestyle=':')
 
 plt.axhline(y=x_ref[0], xmin=0.0, xmax=Tf, linestyle='dotted')
 plt.axhline(y=x_ref[1], xmin=0.0, xmax=Tf, linestyle='dotted')
@@ -903,10 +904,10 @@ plt.show()
 fig = plt.figure()
 
 
-plt.plot(t[:],u_CGinv[:,0], label='u1 (C/Ginv)',linestyle='solid')
-plt.plot(t[:],u_CGinv[:,1], label='u2 (C/Ginv)',linestyle='--')
-plt.plot(t[:],u_CGMRES[:,0], label='u1 (C/GMRES)',linestyle='-.')
-plt.plot(t[:],u_CGMRES[:,1], label='u2 (C/GMRES)',linestyle=':')
+plt.plot(t[:],u_CGinv[:,0], label=r'$u_1$ (C/Ginv)',linestyle='solid')
+plt.plot(t[:],u_CGinv[:,1], label=r'$u_2$ (C/Ginv)',linestyle='--')
+plt.plot(t[:],u_CGMRES[:,0], label=r'$u_1$ (C/GMRES)',linestyle='-.')
+plt.plot(t[:],u_CGMRES[:,1], label=r'$u_2$ (C/GMRES)',linestyle=':')
 
 plt.xlabel('Time[s]', fontsize=14)
 plt.ylabel('[Nm]', fontsize=14)
